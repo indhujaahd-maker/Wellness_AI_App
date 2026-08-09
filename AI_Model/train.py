@@ -1,105 +1,161 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
 import joblib
 
+from pathlib import Path
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 
-# Load dataset
+# --------------------------------------------------
+# Wellness AI - Model Training
+# --------------------------------------------------
 
-data = pd.read_csv(
-    "dataset/wellness_data.csv"
-)
+BASE_DIR = Path(__file__).resolve().parent
+
+DATASET_FILE = BASE_DIR / "dataset" / "wellness_data.csv"
+MODEL_DIR = BASE_DIR / "model"
+MODEL_FILE = MODEL_DIR / "wellness_model.pkl"
 
 
-print("Dataset loaded")
+# --------------------------------------------------
+# 1. Load dataset
+# --------------------------------------------------
+
+print("Loading wellness dataset...")
+
+data = pd.read_csv(DATASET_FILE)
+
+print("Dataset loaded successfully!")
+print(f"Total records: {len(data)}")
+
+print("\nFirst 5 records:")
 print(data.head())
 
 
+# --------------------------------------------------
+# 2. Separate features and target
+# --------------------------------------------------
 
-# Separate input and output
-
-X = data[
-    [
-        "sleep_hours",
-        "water_intake",
-        "exercise_minutes",
-        "stress_level",
-        "mood_score"
-    ]
+features = [
+    "sleep_hours",
+    "water_intake",
+    "exercise_minutes",
+    "stress_level",
+    "mood_score"
 ]
 
-
-y = data["wellness_status"]
-
+target = "wellness_status"
 
 
-# Split data
+X = data[features]
+y = data[target]
+
+
+# --------------------------------------------------
+# 3. Split dataset
+# --------------------------------------------------
 
 X_train, X_test, y_train, y_test = train_test_split(
-
     X,
     y,
-    test_size=0.2,
-    random_state=42
-
+    test_size=0.20,
+    random_state=42,
+    stratify=y
 )
 
 
+print("\nTraining records:", len(X_train))
+print("Testing records:", len(X_test))
 
-# Create model
+
+# --------------------------------------------------
+# 4. Create Random Forest model
+# --------------------------------------------------
+
+print("\nTraining Wellness AI model...")
 
 model = RandomForestClassifier(
-
-    n_estimators=100,
-
-    random_state=42
-
+    n_estimators=200,
+    random_state=42,
+    max_depth=10
 )
 
 
+# --------------------------------------------------
+# 5. Train
+# --------------------------------------------------
 
-# Train
+model.fit(X_train, y_train)
 
-model.fit(
-
-    X_train,
-
-    y_train
-
-)
+print("Model training completed!")
 
 
+# --------------------------------------------------
+# 6. Test model
+# --------------------------------------------------
 
-# Accuracy
+predictions = model.predict(X_test)
 
-accuracy = model.score(
+accuracy = accuracy_score(y_test, predictions)
 
-    X_test,
+print("\n========================================")
+print("MODEL PERFORMANCE")
+print("========================================")
 
-    y_test
-
-)
+print(f"Accuracy: {accuracy * 100:.2f}%")
 
 
+print("\nClassification Report:")
 print(
-    "Model Accuracy:",
-    accuracy
+    classification_report(
+        y_test,
+        predictions,
+        zero_division=0
+    )
 )
 
 
+print("\nConfusion Matrix:")
+print(
+    confusion_matrix(
+        y_test,
+        predictions
+    )
+)
 
-# Save model
+
+# --------------------------------------------------
+# 7. Feature importance
+# --------------------------------------------------
+
+print("\n========================================")
+print("FEATURE IMPORTANCE")
+print("========================================")
+
+importance = model.feature_importances_
+
+for feature, value in zip(features, importance):
+
+    print(
+        f"{feature}: {value:.4f}"
+    )
+
+
+# --------------------------------------------------
+# 8. Save model
+# --------------------------------------------------
+
+MODEL_DIR.mkdir(exist_ok=True)
 
 joblib.dump(
-
     model,
-
-    "model/wellness_model.pkl"
-
+    MODEL_FILE
 )
 
+print("\n========================================")
+print("MODEL SAVED SUCCESSFULLY")
+print("========================================")
 
-print(
-    "Model saved successfully"
-)
+print(f"Model location: {MODEL_FILE}")
